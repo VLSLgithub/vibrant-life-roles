@@ -8,6 +8,8 @@
  * Author: Eric Defore
  * Author URI: https://realbigmarketing.com/
  * Contributors: d4mation
+ * GitHub Plugin URI: VLSLgithub/vibrant-life-roles
+ * GitHub Branch: master
  */
 
 // Exit if accessed directly
