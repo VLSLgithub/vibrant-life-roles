@@ -238,6 +238,48 @@ if ( ! class_exists( 'Vibrant_Life_Roles' ) ) {
 			
 		}
 		
+		/**
+		 * Add Roles
+		 * 
+		 * @access		public
+		 * @since		{{VERSION}}
+		 * @return		void
+		 */
+		public static function activate() {
+			
+			$author = get_role( 'author' );
+			
+			$pv_author = add_role( 'pv_author', __( 'PV Author', 'vibrant-life-roles' ), array( 'read' => true ) );
+			
+			foreach ( $author->capabilities as $capability => $bool ) {
+				
+				if ( strpos( $capability, 'publish_' ) === 0 ) continue; // No publishing
+				
+				$pv_author->add_cap( $capability );
+				
+			}
+			
+			$pv_author->add_cap( 'delete_pages' );
+			$pv_author->add_cap( 'delete_published_pages' );
+			$pv_author->add_cap( 'edit_pages' );
+			$pv_author->add_cap( 'edit_published_pages' );
+			// $pv_author->add_cap( 'publish_pages' ); // No publishing
+			
+		}
+		
+		/**
+		 * Remove Roles
+		 * 
+		 * @access		public
+		 * @since		{{VERSION}}
+		 * @return		void
+		 */
+		public static function deactivate() {
+			
+			remove_role( 'pv_author' );
+			
+		}
+		
 	}
 	
 } // End Class Exists Check
@@ -256,3 +298,6 @@ function vibrant_life_roles_load() {
 	VIBRANTLIFEROLES();
 
 }
+
+register_activation_hook( __FILE__, array( 'Vibrant_Life_Roles', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'Vibrant_Life_Roles', 'deactivate' ) );
