@@ -37,6 +37,12 @@ if ( ! class_exists( 'Vibrant_Life_Roles' ) ) {
 		private $admin_errors;
 
 		/**
+		 * @var			string $current_role The current user's role
+		 * @since		{{VERSION}}
+		 */
+		public $current_role = false;
+
+		/**
 		 * Get active instance
 		 *
 		 * @access	  public
@@ -71,11 +77,17 @@ if ( ! class_exists( 'Vibrant_Life_Roles' ) ) {
 				return false;
 				
 			}
+
+			// Store the current Role in our Object
+			add_action( 'init', array( $this, 'get_current_role' ) );
 			
 			$this->require_necessities();
 			
 			// Register our CSS/JS for the whole plugin
 			add_action( 'init', array( $this, 'register_scripts' ) );
+
+			// Sometimes you cannot remove Menu Items by Capability correctly due to them requiring a hyper generic Cap with no way of changing it
+			add_action( 'admin_menu', array( $this, 'remove_menu_items' ), 999 );
 			
 		}
 
@@ -264,6 +276,19 @@ if ( ! class_exists( 'Vibrant_Life_Roles' ) ) {
 			$pv_author->add_cap( 'edit_pages' );
 			$pv_author->add_cap( 'edit_published_pages' );
 			// $pv_author->add_cap( 'publish_pages' ); // No publishing
+
+			$roles = Vibrant_Life_Roles::get_roles_to_adjust();
+			$caps = Vibrant_Life_Roles::extra_capabilities();
+
+			foreach ( $roles as $role ) {
+
+				$role = get_role( $role );
+
+				foreach ( $caps as $cap ) {
+					$role->add_cap( $cap );
+				}
+
+			}
 			
 		}
 		
@@ -275,9 +300,77 @@ if ( ! class_exists( 'Vibrant_Life_Roles' ) ) {
 		 * @return		void
 		 */
 		public static function deactivate() {
+
+			$roles = Vibrant_Life_Roles::get_roles_to_adjust();
+			$caps = Vibrant_Life_Roles::extra_capabilities();
+
+			foreach ( $roles as $role ) {
+
+				$role = get_role( $role );
+
+				foreach ( $caps as $cap ) {
+					$role->remove_cap( $cap );
+				}
+
+			}
 			
 			remove_role( 'pv_author' );
 			
+		}
+
+		/**
+		 * Gets the current user's role.
+		 * 
+		 * @access		public
+		 * @since		{{VERSION}}
+		 * @return		void
+		 */
+		public function get_current_role() {
+			
+			if ( is_user_logged_in() ) {
+				$current_user       = wp_get_current_user();
+				$roles              = $current_user->roles;
+				$this->current_role = array_shift( $roles );
+			}
+
+			// Staging for some reason always had NULL as the Role. This fixes it.
+			// My Local environment worked just fine though, so maybe in most cases this won't be needed
+			if ( $this->current_role === NULL ) {
+
+				global $user_ID;
+
+				$user_data = get_userdata( $user_ID );
+				$user_role = array_shift( $user_data->roles );
+				$this->current_role = $user_role;
+
+			}
+
+		}
+
+		public static function get_roles_to_adjust() {
+
+			return apply_filters( 'vlsl_roles_to_adjust', array( 'editor', 'author', 'pv_author' ) );
+
+		}
+
+		public static function extra_capabilities() {
+
+			$view_calendar = apply_filters( 'ef_view_calendar_cap', 'ef_view_calendar' );
+			$view_story_budget = apply_filters( 'ef_view_story_budget_cap', 'ef_view_story_budget' );
+
+			return apply_filters( 'vlsl_roles_extra_caps', array(
+				$view_calendar,
+				$view_story_budget,
+			) );
+
+		}
+
+		public function remove_menu_items() {
+
+			if ( in_array( $this->current_role, array( 'editor', 'author', 'pv_author' ) ) ) {
+				$success = remove_menu_page( 'activity_log_page' );
+			}
+
 		}
 		
 	}
